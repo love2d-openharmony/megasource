@@ -24,6 +24,10 @@
 #include "core/windows/SDL_windows.h"
 #endif
 
+#if defined(SDL_PLATFORM_NGAGE)
+#include "core/ngage/SDL_ngage.h"
+#endif
+
 // Simple log messages in SDL
 
 #include "SDL_log_c.h"
@@ -34,6 +38,10 @@
 
 #ifdef SDL_PLATFORM_ANDROID
 #include <android/log.h>
+#endif
+
+#ifdef SDL_PLATFORM_OHOS
+#include <hilog/log.h>
 #endif
 
 #include "stdlib/SDL_vacopy.h"
@@ -119,6 +127,19 @@ static int SDL_android_priority[] = {
 };
 SDL_COMPILE_TIME_ASSERT(android_priority, SDL_arraysize(SDL_android_priority) == SDL_LOG_PRIORITY_COUNT);
 #endif // SDL_PLATFORM_ANDROID
+
+#ifdef SDL_PLATFORM_OHOS
+static int SDL_ohos_priority[] = {
+    LOG_DEBUG,
+    LOG_DEBUG,
+    LOG_DEBUG,
+    LOG_DEBUG,
+    LOG_INFO,
+    LOG_WARN,
+    LOG_ERROR,
+    LOG_FATAL
+};
+#endif
 
 static void SDLCALL SDL_LoggingChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
 {
@@ -375,6 +396,9 @@ void SDL_ResetLogPriorities(void)
 
     SDL_LockMutex(SDL_log_lock);
     {
+        const char *env = SDL_getenv("DEBUG_INVOCATION");
+        bool debug = (env && *env && *env != '0');
+
         CleanupLogPriorities();
 
         SDL_log_default_priority = SDL_LOG_PRIORITY_INVALID;
@@ -397,7 +421,11 @@ void SDL_ResetLogPriorities(void)
 
             switch (i) {
             case SDL_LOG_CATEGORY_APPLICATION:
-                SDL_log_priorities[i] = SDL_LOG_PRIORITY_INFO;
+                if (debug) {
+                    SDL_log_priorities[i] = SDL_LOG_PRIORITY_DEBUG;
+                } else {
+                    SDL_log_priorities[i] = SDL_LOG_PRIORITY_INFO;
+                }
                 break;
             case SDL_LOG_CATEGORY_ASSERT:
                 SDL_log_priorities[i] = SDL_LOG_PRIORITY_WARN;
@@ -406,7 +434,11 @@ void SDL_ResetLogPriorities(void)
                 SDL_log_priorities[i] = SDL_LOG_PRIORITY_VERBOSE;
                 break;
             default:
-                SDL_log_priorities[i] = SDL_LOG_PRIORITY_ERROR;
+                if (debug) {
+                    SDL_log_priorities[i] = SDL_LOG_PRIORITY_DEBUG;
+                } else {
+                    SDL_log_priorities[i] = SDL_LOG_PRIORITY_ERROR;
+                }
                 break;
             }
         }
@@ -450,7 +482,7 @@ bool SDL_SetLogPriorityPrefix(SDL_LogPriority priority, const char *prefix)
 {
     char *prefix_copy;
 
-    if (priority <= SDL_LOG_PRIORITY_INVALID || priority >= SDL_LOG_PRIORITY_COUNT) {
+    CHECK_PARAM(priority <= SDL_LOG_PRIORITY_INVALID || priority >= SDL_LOG_PRIORITY_COUNT) {
         return SDL_InvalidParamError("priority");
     }
 
@@ -556,7 +588,7 @@ void SDL_LogMessage(int category, SDL_LogPriority priority, SDL_PRINTF_FORMAT_ST
     va_end(ap);
 }
 
-#ifdef SDL_PLATFORM_ANDROID
+#if defined(SDL_PLATFORM_ANDROID) || defined(SDL_PLATFORM_OHOS)
 static const char *GetCategoryPrefix(int category)
 {
     if (category < SDL_LOG_CATEGORY_RESERVED2) {
@@ -567,7 +599,7 @@ static const char *GetCategoryPrefix(int category)
     }
     return "CUSTOM";
 }
-#endif // SDL_PLATFORM_ANDROID
+#endif
 
 void SDL_LogMessageV(int category, SDL_LogPriority priority, SDL_PRINTF_FORMAT_STRING const char *fmt, va_list ap)
 {
@@ -587,25 +619,6 @@ void SDL_LogMessageV(int category, SDL_LogPriority priority, SDL_PRINTF_FORMAT_S
         return;
     }
 
-#if defined(SDL_PLATFORM_NGAGE)
-    extern void NGAGE_vnprintf(char *buf, size_t size, const char *fmt, va_list ap);
-    char buf[1024];
-    NGAGE_vnprintf(buf, sizeof(buf), fmt, ap);
-
-#ifdef ENABLE_FILE_LOG
-    FILE* file;
-    file = fopen("E:/SDL_Log.txt", "a");
-    if (file)
-    {
-        vfprintf(file, fmt, ap);
-        fprintf(file, "\n");
-        (void)fclose(file);
-    }
-#endif
-
-    return;
-#endif
-
     // Render into stack buffer
     va_copy(aq, ap);
     len = SDL_vsnprintf(stack_buf, sizeof(stack_buf), fmt, aq);
@@ -616,15 +629,21 @@ void SDL_LogMessageV(int category, SDL_LogPriority priority, SDL_PRINTF_FORMAT_S
     }
 
     // If message truncated, allocate and re-render
-    if (len >= sizeof(stack_buf) && SDL_size_add_check_overflow(len, 1, &len_plus_term)) {
-        // Allocate exactly what we need, including the zero-terminator
-        message = (char *)SDL_malloc(len_plus_term);
-        if (!message) {
-            return;
+    if (len >= sizeof(stack_buf)) {
+        if (SDL_size_add_check_overflow(len, 1, &len_plus_term)) {
+            // Allocate exactly what we need, including the zero-terminator
+            message = (char *)SDL_malloc(len_plus_term);
+            if (!message) {
+                return;
+            }
+            va_copy(aq, ap);
+            len = SDL_vsnprintf(message, len_plus_term, fmt, aq);
+            va_end(aq);
+        } else {
+            // Allocation would overflow, use truncated message
+            message = stack_buf;
+            len = sizeof(stack_buf);
         }
-        va_copy(aq, ap);
-        len = SDL_vsnprintf(message, len_plus_term, fmt, aq);
-        va_end(aq);
     } else {
         message = stack_buf;
     }
@@ -751,6 +770,13 @@ static void SDLCALL SDL_LogOutput(void *userdata, int category, SDL_LogPriority 
         SDL_snprintf(tag, SDL_arraysize(tag), "SDL/%s", GetCategoryPrefix(category));
         __android_log_write(SDL_android_priority[priority], tag, message);
     }
+    #elif defined(SDL_PLATFORM_OHOS)
+    {
+        char tag[32];
+
+        SDL_snprintf(tag, SDL_arraysize(tag), "SDL/%s", GetCategoryPrefix(category));
+        OH_LOG_Print(LOG_APP, SDL_ohos_priority[priority], 0, tag, "%{public}s", message);
+    }
 #elif defined(SDL_PLATFORM_APPLE) && (defined(SDL_VIDEO_DRIVER_COCOA) || defined(SDL_VIDEO_DRIVER_UIKIT))
     /* Technically we don't need Cocoa/UIKit, but that's where this function is defined for now.
      */
@@ -788,7 +814,15 @@ static void SDLCALL SDL_LogOutput(void *userdata, int category, SDL_LogPriority 
     }
 #elif defined(SDL_PLATFORM_NGAGE)
     {
-        /* Nothing to do here. */
+        NGAGE_DebugPrintf("%s%s", GetLogPriorityPrefix(priority), message);
+#ifdef ENABLE_FILE_LOG
+        FILE *pFile;
+        pFile = fopen("E:/SDL_Log.txt", "a");
+        if (pFile) {
+            (void)fprintf(pFile, "%s%s\n", GetLogPriorityPrefix(priority), message);
+            (void)fclose(pFile);
+        }
+#endif
     }
 #endif
 #if defined(HAVE_STDIO_H) && \

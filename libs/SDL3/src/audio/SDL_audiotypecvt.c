@@ -530,6 +530,9 @@ static void SDL_TARGETING("ssse3") SDL_Convert_Swap32_SSSE3(Uint32 *dst, const U
 }
 #endif
 
+#ifndef SDL_PLATFORM_OHOS
+#undef SDL_NEON_INTRINSICS
+#endif
 #ifdef SDL_NEON_INTRINSICS
 
 // C99 requires that all code modifying floating point environment should
@@ -537,7 +540,9 @@ static void SDL_TARGETING("ssse3") SDL_Convert_Swap32_SSSE3(Uint32 *dst, const U
 // behavior. However, the compiler support for this pragma is bad.
 #if defined(__clang__)
 #if __clang_major__ >= 12
+#if defined(__aarch64__)
 #pragma STDC FENV_ACCESS ON
+#endif
 #endif
 #elif defined(_MSC_VER)
 #pragma fenv_access (on)
@@ -814,7 +819,9 @@ static void SDL_Convert_Swap32_NEON(Uint32 *dst, const Uint32 *src, int num_samp
 
 #if defined(__clang__)
 #if __clang_major__ >= 12
+#if defined(__aarch64__)
 #pragma STDC FENV_ACCESS DEFAULT
+#endif
 #endif
 #elif defined(_MSC_VER)
 #pragma fenv_access (off)

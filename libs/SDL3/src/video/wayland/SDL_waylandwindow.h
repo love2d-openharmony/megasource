@@ -46,7 +46,6 @@ struct SDL_WindowData
         struct
         {
             struct libdecor_frame *frame;
-            bool initial_configure_seen;
         } libdecor;
 #endif
         struct
@@ -64,7 +63,8 @@ struct SDL_WindowData
                     struct xdg_positioner *xdg_positioner;
                 } popup;
             };
-            bool initial_configure_seen;
+
+            Uint32 serial;
         } xdg;
     } shell_surface;
     enum
@@ -129,7 +129,7 @@ struct SDL_WindowData
     char *app_id;
     double scale_factor;
 
-    struct Wayland_SHMBuffer *icon_buffers;
+    struct wl_buffer **icon_buffers;
     int icon_buffer_count;
 
     // Keyboard, pointer, and touch focus refcount.
@@ -205,7 +205,7 @@ struct SDL_WindowData
     bool suspended;
     bool resizing;
     bool active;
-    bool drop_interactive_resizes;
+    bool pending_config_ack;
     bool is_fullscreen;
     bool fullscreen_exclusive;
     bool drop_fullscreen_requests;
@@ -255,6 +255,7 @@ extern void *Wayland_GetWindowICCProfile(SDL_VideoDevice *_this, SDL_Window *win
 extern bool Wayland_SetWindowHitTest(SDL_Window *window, bool enabled);
 extern bool Wayland_FlashWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_FlashOperation operation);
 extern bool Wayland_SyncWindow(SDL_VideoDevice *_this, SDL_Window *window);
+extern bool Wayland_ReconfigureWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_WindowFlags flags);
 
 extern void Wayland_RemoveOutputFromWindow(SDL_WindowData *window, SDL_DisplayData *display_data);
 
