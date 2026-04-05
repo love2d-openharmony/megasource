@@ -74,6 +74,9 @@ static SDL_GetPowerInfo_Impl implementations[] = {
 #ifdef SDL_POWER_EMSCRIPTEN // handles Emscripten
     SDL_GetPowerInfo_Emscripten,
 #endif
+#ifdef SDL_POWER_OHOS
+    SDL_GetPowerInfo_OHOS
+#endif
 
 #ifdef SDL_POWER_HARDWIRED
     SDL_GetPowerInfo_Hardwired,
@@ -84,7 +87,7 @@ static SDL_GetPowerInfo_Impl implementations[] = {
 SDL_PowerState SDL_GetPowerInfo(int *seconds, int *percent)
 {
 #ifndef SDL_POWER_DISABLED
-    const int total = sizeof(implementations) / sizeof(implementations[0]);
+    const int total = SDL_arraysize(implementations);
     SDL_PowerState result = SDL_POWERSTATE_UNKNOWN;
     int i;
 #endif

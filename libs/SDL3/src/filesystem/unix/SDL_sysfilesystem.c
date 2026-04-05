@@ -78,7 +78,7 @@ static char *search_path_for_binary(const char *bin)
     char *envr;
     size_t alloc_size;
     char *exe = NULL;
-    char *start = envr;
+    char *start;
     char *ptr;
 
     if (!envr_real) {
@@ -86,7 +86,7 @@ static char *search_path_for_binary(const char *bin)
         return NULL;
     }
 
-    envr = SDL_strdup(envr_real);
+    start = envr = SDL_strdup(envr_real);
     if (!envr) {
         return NULL;
     }
@@ -269,15 +269,6 @@ char *SDL_SYS_GetPrefPath(const char *org, const char *app)
     const char *append;
     char *result = NULL;
     char *ptr = NULL;
-    size_t len = 0;
-
-    if (!app) {
-        SDL_InvalidParamError("app");
-        return NULL;
-    }
-    if (!org) {
-        org = "";
-    }
 
     if (!envr) {
         // You end up with "$HOME/.local/share/Game Name 2"
@@ -292,7 +283,7 @@ char *SDL_SYS_GetPrefPath(const char *org, const char *app)
         append = "/";
     }
 
-    len = SDL_strlen(envr);
+    size_t len = SDL_strlen(envr);
     if (envr[len - 1] == '/') {
         append += 1;
     }

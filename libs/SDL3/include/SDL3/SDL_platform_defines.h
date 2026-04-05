@@ -112,6 +112,11 @@
 #undef SDL_PLATFORM_LINUX
 #endif
 
+#if defined(OHOS) || defined(__OHOS__)
+#define SDL_PLATFORM_OHOS 1
+#undef SDL_PLATFORM_LINUX
+#endif
+
 #if defined(__unix__) || defined(__unix) || defined(unix)
 
 /**
@@ -190,7 +195,7 @@
 #if TARGET_OS_VISION
 
 /**
- * A preprocessor macro that is only defined if compiling for VisionOS.
+ * A preprocessor macro that is only defined if compiling for visionOS.
  *
  * \since This macro is available since SDL 3.2.0.
  *
@@ -202,7 +207,7 @@
 #if TARGET_OS_IPHONE
 
 /**
- * A preprocessor macro that is only defined if compiling for iOS.
+ * A preprocessor macro that is only defined if compiling for iOS or visionOS.
  *
  * \since This macro is available since SDL 3.2.0.
  *
@@ -482,6 +487,16 @@
  * \since This macro is available since SDL 3.4.0.
  */
 #define SDL_PLATFORM_NGAGE 1
+#endif
+
+#ifdef __GNU__
+
+/**
+ * A preprocessor macro that is only defined if compiling for GNU/Hurd.
+ *
+ * \since This macro is available since SDL 3.4.0.
+ */
+#define SDL_PLATFORM_HURD 1
 #endif
 
 #endif /* SDL_platform_defines_h_ */

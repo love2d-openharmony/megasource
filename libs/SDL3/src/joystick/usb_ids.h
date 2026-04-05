@@ -32,7 +32,8 @@
 #define USB_VENDOR_BACKBONE     0x358a
 #define USB_VENDOR_GAMESIR      0x3537
 #define USB_VENDOR_DRAGONRISE   0x0079
-#define USB_VENDOR_FLYDIGI      0x04b4
+#define USB_VENDOR_FLYDIGI_V1   0x04b4
+#define USB_VENDOR_FLYDIGI_V2   0x37d7
 #define USB_VENDOR_GOOGLE       0x18d1
 #define USB_VENDOR_HORI         0x0f0d
 #define USB_VENDOR_HP           0x03f0
@@ -59,14 +60,17 @@
 #define USB_VENDOR_SWITCH       0x2563
 #define USB_VENDOR_VALVE        0x28de
 #define USB_VENDOR_ZEROPLUS     0x0c12
+#define USB_VENDOR_RASPBERRYPI  0x2e8a // Commercial hardware from various companies are registered under this VID
+#define USB_VENDOR_ZUIKI        0x33dd
 
-#define USB_PRODUCT_8BITDO_ULTIMATE2_WIRELESS             0x6012
 #define USB_PRODUCT_8BITDO_SF30_PRO                       0x6000    // B + START
 #define USB_PRODUCT_8BITDO_SF30_PRO_BT                    0x6100    // B + START
 #define USB_PRODUCT_8BITDO_SN30_PRO                       0x6001    // B + START
 #define USB_PRODUCT_8BITDO_SN30_PRO_BT                    0x6101    // B + START
-#define USB_PRODUCT_8BITDO_PRO_2                          0x6003    // mode switch to D 
-#define USB_PRODUCT_8BITDO_PRO_2_BT                       0x6006    // mode switch to D 
+#define USB_PRODUCT_8BITDO_PRO_2                          0x6003    // mode switch to D
+#define USB_PRODUCT_8BITDO_PRO_2_BT                       0x6006    // mode switch to D
+#define USB_PRODUCT_8BITDO_PRO_3                          0x6009    // mode switch to D
+#define USB_PRODUCT_8BITDO_ULTIMATE2_WIRELESS             0x6012    // mode switch to BT
 #define USB_PRODUCT_AMAZON_LUNA_CONTROLLER                0x0419
 #define USB_PRODUCT_ASTRO_C40_XBOX360                     0x0024
 #define USB_PRODUCT_BACKBONE_ONE_IOS                      0x0103
@@ -78,7 +82,9 @@
 #define USB_PRODUCT_EVORETRO_GAMECUBE_ADAPTER1            0x1843
 #define USB_PRODUCT_EVORETRO_GAMECUBE_ADAPTER2            0x1844
 #define USB_PRODUCT_EVORETRO_GAMECUBE_ADAPTER3            0x1846
-#define USB_PRODUCT_FLYDIGI_GAMEPAD                       0x2412
+#define USB_PRODUCT_FLYDIGI_V1_GAMEPAD                    0x2412
+#define USB_PRODUCT_FLYDIGI_V2_APEX                       0x2501
+#define USB_PRODUCT_FLYDIGI_V2_VADER                      0x2401
 #define USB_PRODUCT_HORI_FIGHTING_STICK_ALPHA_PS4         0x011c
 #define USB_PRODUCT_HORI_FIGHTING_STICK_ALPHA_PS5         0x0184
 #define USB_PRODUCT_HORI_FIGHTING_STICK_ALPHA_PS5         0x0184
@@ -101,11 +107,17 @@
 #define USB_PRODUCT_NINTENDO_SWITCH_JOYCON_PAIR           0x2008 // Used by joycond
 #define USB_PRODUCT_NINTENDO_SWITCH_JOYCON_RIGHT          0x2007
 #define USB_PRODUCT_NINTENDO_SWITCH_PRO                   0x2009
+#define USB_PRODUCT_NINTENDO_SWITCH2_GAMECUBE_CONTROLLER  0x2073
+#define USB_PRODUCT_NINTENDO_SWITCH2_JOYCON_LEFT          0x2067
+#define USB_PRODUCT_NINTENDO_SWITCH2_JOYCON_PAIR          0x2068
+#define USB_PRODUCT_NINTENDO_SWITCH2_JOYCON_RIGHT         0x2066
+#define USB_PRODUCT_NINTENDO_SWITCH2_PRO                  0x2069
 #define USB_PRODUCT_NINTENDO_WII_REMOTE                   0x0306
 #define USB_PRODUCT_NINTENDO_WII_REMOTE2                  0x0330
 #define USB_PRODUCT_NVIDIA_SHIELD_CONTROLLER_V103         0x7210
 #define USB_PRODUCT_NVIDIA_SHIELD_CONTROLLER_V104         0x7214
 #define USB_PRODUCT_PDP_ROCK_CANDY                        0x0246
+#define USB_PRODUCT_PDP_REALMZ_WIRELESS                   0x018c
 #define USB_PRODUCT_POWERA_MINI                           0x541a
 #define USB_PRODUCT_RAZER_ATROX                           0x0a00
 #define USB_PRODUCT_RAZER_KITSUNE                         0x1012
@@ -137,6 +149,8 @@
 #define USB_PRODUCT_THRUSTMASTER_ESWAPX_PRO_PS4           0xd00e
 #define USB_PRODUCT_THRUSTMASTER_T_FLIGHT_HOTAS_ONE       0xb68c
 #define USB_PRODUCT_VALVE_STEAM_CONTROLLER_DONGLE         0x1142
+#define USB_PRODUCT_VALVE_STEAM_PROTEUS_DONGLE            0x1304
+#define USB_PRODUCT_VALVE_STEAM_NEREID_DONGLE             0x1305
 #define USB_PRODUCT_VICTRIX_FS_PRO                        0x0203
 #define USB_PRODUCT_VICTRIX_FS_PRO_V2                     0x0207
 #define USB_PRODUCT_XBOX360_XUSB_CONTROLLER               0x02a1 // XUSB driver software PID
@@ -159,6 +173,12 @@
 #define USB_PRODUCT_XBOX_SERIES_X_BLE                     0x0b13
 #define USB_PRODUCT_XBOX_ONE_XBOXGIP_CONTROLLER           0x02ff // XBOXGIP driver software PID
 #define USB_PRODUCT_STEAM_VIRTUAL_GAMEPAD                 0x11ff
+#define USB_PRODUCT_HANDHELDLEGEND_SINPUT_GENERIC         0x10c6
+#define USB_PRODUCT_HANDHELDLEGEND_PROGCC                 0x10df
+#define USB_PRODUCT_HANDHELDLEGEND_GCULTIMATE             0x10dd
+#define USB_PRODUCT_BONZIRICHANNEL_FIREBIRD               0x10e0
+#define USB_PRODUCT_ZUIKI_MASCON_PRO                      0x0006
+#define USB_PRODUCT_VOIDGAMING_PS4FIREBIRD                0x10e5
 
 // USB usage pages
 #define USB_USAGEPAGE_GENERIC_DESKTOP 0x0001
