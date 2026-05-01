@@ -81,6 +81,10 @@ typedef struct
 
 void OHOS_windowUpdateAttributes(SDL_Window *w)
 {
+    w->x = x;
+    w->y = y;
+    w->w = wid;
+    w->h = hei;
     SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_MOVED, x, y);
     SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_RESIZED, wid, hei);
     SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED, wid, hei);
@@ -556,7 +560,6 @@ static int sdlLaunchMainInternal(void* reserved)
 
     return status;
 }
-
 static SDL_Thread *mainThread;
 
 static napi_value sdlLaunchMain(napi_env env, napi_callback_info info)
@@ -632,7 +635,6 @@ static napi_value sdlLaunchMain(napi_env env, napi_callback_info info)
             }
         }
     }
-
     mainThread = SDL_CreateThread(sdlLaunchMainInternal, "SDL App Thread", entry);
     SDL_SetMainReady();
 

@@ -1,4 +1,4 @@
-export const sdlCallbackInit: (d) => void;
+export const sdlCallbackInit: (d: unknown) => void;
 export const sdlLaunchMain: (lib: string, func: string, args: string[]) => number;
 export const sdlKeyEvent: (scancode: number, type: number) => number;
 export const sdlTextAppend: (str: string) => number;
