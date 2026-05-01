@@ -402,6 +402,65 @@ elseif(ANDROID)
 	set(LUA_VERSION_MINOR 1)
 	set(LUA_VERSION_PATCH 5)
 	set(LUA_VERSION_STRING "LuaJIT ${MEGA_LUAJIT_VER}")
+elseif(CMAKE_SYSTEM_NAME MATCHES "OHOS|OpenHarmony|HarmonyOS")
+	message(STATUS "-----------------------------------------------------")
+	message(STATUS "Configuring: LuaJIT ${MEGA_LUAJIT_VER}")
+	message(STATUS "-----------------------------------------------------")
+
+	if(NOT "${OHOS_ARCH}" STREQUAL "arm64-v8a" AND NOT "${CMAKE_OHOS_ARCH_ABI}" STREQUAL "arm64-v8a")
+		message(FATAL_ERROR "LuaJIT for OpenHarmony is currently configured only for arm64-v8a")
+	endif()
+
+	if(DEFINED OHOS_SDK_NATIVE)
+		set(MEGA_OHOS_NATIVE_DIR "${OHOS_SDK_NATIVE}")
+	else()
+		get_filename_component(MEGA_OHOS_NATIVE_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+		get_filename_component(MEGA_OHOS_NATIVE_DIR "${MEGA_OHOS_NATIVE_DIR}/../../openharmony/native" ABSOLUTE)
+	endif()
+
+	set(MEGA_LUAJIT_DIR "LuaJIT")
+	file(COPY libs/${MEGA_LUAJIT_DIR} DESTINATION ${CMAKE_BINARY_DIR}/libs)
+	set(MEGA_LUAJIT_SOURCE_DIR ${CMAKE_BINARY_DIR}/libs/${MEGA_LUAJIT_DIR})
+	set(MEGA_LUAJIT_OHOS_TOOL_PREFIX "${MEGA_OHOS_NATIVE_DIR}/llvm/bin/aarch64-unknown-linux-ohos-")
+	set(MEGA_LUAJIT_OHOS_AR "${MEGA_OHOS_NATIVE_DIR}/llvm/bin/llvm-ar rcus")
+	set(MEGA_LUAJIT_OHOS_STRIP "${MEGA_OHOS_NATIVE_DIR}/llvm/bin/llvm-strip")
+
+	ExternalProject_Add(luajit-build
+		SOURCE_DIR ${MEGA_LUAJIT_SOURCE_DIR}
+		BUILD_IN_SOURCE 1
+		CONFIGURE_COMMAND ""
+		BUILD_COMMAND make -C ${MEGA_LUAJIT_SOURCE_DIR}/src
+			BUILDMODE=static
+			TARGET_SYS=Linux
+			HOST_CC=clang
+			CROSS=${MEGA_LUAJIT_OHOS_TOOL_PREFIX}
+			CC=clang
+			"STATIC_CC=${MEGA_LUAJIT_OHOS_TOOL_PREFIX}clang -fPIC -fvisibility=hidden"
+			TARGET_AR=${MEGA_LUAJIT_OHOS_AR}
+			TARGET_STRIP=${MEGA_LUAJIT_OHOS_STRIP}
+			all
+			LJCORE_O=ljamalg.o
+		INSTALL_COMMAND ""
+		BUILD_BYPRODUCTS "${MEGA_LUAJIT_SOURCE_DIR}/src/libluajit.a"
+	)
+
+	add_library(luajit STATIC IMPORTED GLOBAL)
+	add_dependencies(luajit luajit-build)
+	set_target_properties(luajit PROPERTIES
+		IMPORTED_LOCATION "${MEGA_LUAJIT_SOURCE_DIR}/src/libluajit.a"
+		INTERFACE_INCLUDE_DIRECTORIES "${MEGA_LUAJIT_SOURCE_DIR}/src"
+	)
+
+	set(MEGA_LUAJIT_LIB luajit m dl)
+	set(MEGA_LUAJIT_DLL)
+	set(MEGA_LUAJIT_INCLUDE ${MEGA_LUAJIT_SOURCE_DIR}/src)
+	set(LUA_FOUND ON)
+	set(LUA_INCLUDE_DIR ${MEGA_LUAJIT_INCLUDE})
+	set(LUA_LIBRARY luajit)
+	set(LUA_VERSION_MAJOR 5)
+	set(LUA_VERSION_MINOR 1)
+	set(LUA_VERSION_PATCH 5)
+	set(LUA_VERSION_STRING "LuaJIT ${MEGA_LUAJIT_VER}")
 endif()
 
 set(MEGA_3P
