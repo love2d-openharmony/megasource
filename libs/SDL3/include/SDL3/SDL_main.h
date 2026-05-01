@@ -176,7 +176,7 @@
          */
         #define SDL_MAIN_NEEDED
 
-    #elif defined(SDL_PLATFORM_ANDROID)
+    #elif defined(SDL_PLATFORM_ANDROID) || defined(SDL_PLATFORM_OHOS)
         /* On Android SDL provides a Java class in SDLActivity.java that is the
            main activity entry point.
 
