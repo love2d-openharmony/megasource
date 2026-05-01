@@ -1,5 +1,6 @@
 #include "SDL_internal.h"
 #include "events/SDL_keyboard_c.h"
+#include "events/SDL_windowevents_c.h"
 #include "video/ohos/SDL_ohosmouse.h"
 #include <EGL/egl.h>
 #include <EGL/eglplatform.h>
@@ -15,7 +16,11 @@
 #include "../../video/ohos/SDL_ohoskeyboard.h"
 #include "../../video/ohos/SDL_ohostouch.h"
 #include "../../video/ohos/SDL_ohosvideo.h"
+#define SDL_MAIN_HANDLED
+#include "SDL3/SDL_atomic.h"
+#include "SDL3/SDL_main.h"
 #include "SDL3/SDL_mutex.h"
+#include "SDL3/SDL_timer.h"
 #include "SDL_ohos.h"
 #include "napi/native_api.h"
 #include <ace/xcomponent/native_interface_xcomponent.h>
@@ -80,8 +85,10 @@ void OHOS_windowUpdateAttributes(SDL_Window *w)
     w->y = y;
     w->w = wid;
     w->h = hei;
-    
-    SDL_SetWindowSize(w, wid, hei);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_MOVED, x, y);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_RESIZED, wid, hei);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED, wid, hei);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
 }
 
 void OHOS_windowDataFill(SDL_Window *w)
@@ -404,8 +411,8 @@ void OHOS_StopTextInput()
     while (!data->returned) {}
 }
 
-static bool dialogBoxFinished = false;
-static int dialogBoxChoice = -1;
+static SDL_AtomicInt dialogBoxFinished;
+static SDL_AtomicInt dialogBoxChoice;
 
 int OHOS_MessageBox(const char* title, const char* message, int ml, int* mapping, int bl, const char * const *buttons)
 {
@@ -433,9 +440,11 @@ int OHOS_MessageBox(const char* title, const char* message, int ml, int* mapping
     napi_call_threadsafe_function(napiEnv.func, data, napi_tsfn_blocking);
     while (!data->returned) {}
     SDL_free(data);
-    while (!dialogBoxFinished) {}
-    dialogBoxFinished = false;
-    return dialogBoxChoice;
+    while (!SDL_GetAtomicInt(&dialogBoxFinished)) {
+        SDL_Delay(1);
+    }
+    SDL_SetAtomicInt(&dialogBoxFinished, 0);
+    return SDL_GetAtomicInt(&dialogBoxChoice);
 }
 
 void OHOS_OpenLink(const char* url)
@@ -517,6 +526,9 @@ static napi_value sdlCallbackInit(napi_env env, napi_callback_info info)
 typedef struct entrypoint_info_ {
     char* libname;
     char* func;
+    int argc;
+    char **argv;
+    void *argblock;
 } entrypoint_info;
 static int sdlLaunchMainInternal(void* reserved)
 {
@@ -524,22 +536,36 @@ static int sdlLaunchMainInternal(void* reserved)
         return -1;
     }
     entrypoint_info *data = (entrypoint_info*)reserved;
-    void *lib = dlopen(data->libname, RTLD_LAZY);
+    int status = -1;
+    void *lib = dlopen(data->libname, RTLD_GLOBAL | RTLD_LAZY);
     void *func = dlsym(lib, data->func);
-    typedef int (*test)();
-    int d = ((test)func)();
-    dlclose(lib);
-    SDL_free(reserved);
-    
-    return d;
-}
+    if (func != NULL) {
+        if (data->argc >= 0) {
+            status = SDL_RunApp(data->argc, data->argv, (SDL_main_func)func, NULL);
+        } else {
+            typedef int (*test)(void);
+            status = ((test)func)();
+        }
+    }
 
+    if (lib != NULL) {
+        dlclose(lib);
+    }
+    if (data->argblock != NULL) {
+        SDL_free(data->argblock);
+    }
+    SDL_free(data->libname);
+    SDL_free(data->func);
+    SDL_free(reserved);
+
+    return status;
+}
 static SDL_Thread *mainThread;
 
 static napi_value sdlLaunchMain(napi_env env, napi_callback_info info)
 {
-    size_t argc = 2;
-    napi_value args[2] = { NULL, NULL };
+    size_t argc = 3;
+    napi_value args[3] = { NULL, NULL, NULL };
     napi_get_cb_info(env, info, &argc, args, NULL, NULL);
 
     size_t libstringSize = 0;
@@ -555,6 +581,60 @@ static napi_value sdlLaunchMain(napi_env env, napi_callback_info info)
     entrypoint_info *entry = (entrypoint_info*)SDL_malloc(sizeof(entrypoint_info));
     entry->func = fname;
     entry->libname = libname;
+    entry->argc = -1;
+    entry->argv = NULL;
+    entry->argblock = NULL;
+
+    if (argc >= 3 && args[2] != NULL) {
+        uint32_t len = 0;
+        napi_status arrstatus = napi_get_array_length(env, args[2], &len);
+        if (arrstatus == napi_ok) {
+            const char *argv0 = "app_process";
+            size_t total_alloc_len = (SDL_strlen(argv0) + 1) + ((len + 2) * sizeof(char *));
+
+            for (uint32_t i = 0; i < len; ++i) {
+                napi_value item = NULL;
+                size_t itemlen = 0;
+                total_alloc_len++;
+                if (napi_get_element(env, args[2], i, &item) == napi_ok && item != NULL) {
+                    napi_get_value_string_utf8(env, item, NULL, 0, &itemlen);
+                    total_alloc_len += itemlen + 1;
+                }
+            }
+
+            void *argblock = SDL_malloc(total_alloc_len);
+            if (argblock != NULL) {
+                size_t remain = total_alloc_len - (sizeof(char *) * (len + 2));
+                int outargc = 0;
+                char **argv = (char **)argblock;
+                char *ptr = (char *)&argv[len + 2];
+                size_t copied = SDL_strlcpy(ptr, argv0, remain) + 1;
+                argv[outargc++] = ptr;
+                remain -= copied;
+                ptr += copied;
+
+                for (uint32_t i = 0; i < len; ++i) {
+                    napi_value item = NULL;
+                    size_t itemlen = 0;
+                    if (napi_get_element(env, args[2], i, &item) == napi_ok && item != NULL) {
+                        napi_get_value_string_utf8(env, item, NULL, 0, &itemlen);
+                        copied = itemlen + 1;
+                        if (copied <= remain) {
+                            size_t out = 0;
+                            napi_get_value_string_utf8(env, item, ptr, remain, &out);
+                            argv[outargc++] = ptr;
+                            remain -= out + 1;
+                            ptr += out + 1;
+                        }
+                    }
+                }
+                argv[outargc] = NULL;
+                entry->argc = outargc;
+                entry->argv = argv;
+                entry->argblock = argblock;
+            }
+        }
+    }
     mainThread = SDL_CreateThread(sdlLaunchMainInternal, "SDL App Thread", entry);
     SDL_SetMainReady();
 
@@ -856,8 +936,10 @@ static napi_value sdlSendDialogStatus(napi_env env, napi_callback_info info)
     napi_value args[1] = { NULL };
     napi_get_cb_info(env, info, &argc, args, NULL, NULL);
     
-    napi_get_value_int32(env, args[0], &dialogBoxChoice);
-    dialogBoxFinished = true;
+    int choice = -1;
+    napi_get_value_int32(env, args[0], &choice);
+    SDL_SetAtomicInt(&dialogBoxChoice, choice);
+    SDL_SetAtomicInt(&dialogBoxFinished, 1);
     
     napi_value result;
     napi_create_int32(env, 0, &result);
