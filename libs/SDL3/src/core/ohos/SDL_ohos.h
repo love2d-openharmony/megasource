@@ -19,6 +19,8 @@ bool OHOS_IsBatteryPresent();
 bool OHOS_IsBatteryCharging();
 bool OHOS_IsBatteryCharged();
 int OHOS_GetBatteryPercent();
+extern SDL_DECLSPEC void OHOS_Vibrate(double seconds);
+extern SDL_DECLSPEC bool OHOS_HasBackgroundMusic();
 void OHOS_SetClipboardText(const char* data);
 char* OHOS_GetStoragePath();
 
