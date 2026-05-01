@@ -1,5 +1,6 @@
 #include "SDL_internal.h"
 #include "events/SDL_keyboard_c.h"
+#include "events/SDL_windowevents_c.h"
 #include "video/ohos/SDL_ohosmouse.h"
 #include <EGL/egl.h>
 #include <EGL/eglplatform.h>
@@ -16,8 +17,10 @@
 #include "../../video/ohos/SDL_ohostouch.h"
 #include "../../video/ohos/SDL_ohosvideo.h"
 #define SDL_MAIN_HANDLED
+#include "SDL3/SDL_atomic.h"
 #include "SDL3/SDL_main.h"
 #include "SDL3/SDL_mutex.h"
+#include "SDL3/SDL_timer.h"
 #include "SDL_ohos.h"
 #include "napi/native_api.h"
 #include <ace/xcomponent/native_interface_xcomponent.h>
@@ -78,12 +81,10 @@ typedef struct
 
 void OHOS_windowUpdateAttributes(SDL_Window *w)
 {
-    w->x = x;
-    w->y = y;
-    w->w = wid;
-    w->h = hei;
-    
-    SDL_SetWindowSize(w, wid, hei);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_MOVED, x, y);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_RESIZED, wid, hei);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED, wid, hei);
+    SDL_SendWindowEvent(w, SDL_EVENT_WINDOW_EXPOSED, 0, 0);
 }
 
 void OHOS_windowDataFill(SDL_Window *w)
@@ -406,8 +407,8 @@ void OHOS_StopTextInput()
     while (!data->returned) {}
 }
 
-static bool dialogBoxFinished = false;
-static int dialogBoxChoice = -1;
+static SDL_AtomicInt dialogBoxFinished;
+static SDL_AtomicInt dialogBoxChoice;
 
 int OHOS_MessageBox(const char* title, const char* message, int ml, int* mapping, int bl, const char * const *buttons)
 {
@@ -435,9 +436,11 @@ int OHOS_MessageBox(const char* title, const char* message, int ml, int* mapping
     napi_call_threadsafe_function(napiEnv.func, data, napi_tsfn_blocking);
     while (!data->returned) {}
     SDL_free(data);
-    while (!dialogBoxFinished) {}
-    dialogBoxFinished = false;
-    return dialogBoxChoice;
+    while (!SDL_GetAtomicInt(&dialogBoxFinished)) {
+        SDL_Delay(1);
+    }
+    SDL_SetAtomicInt(&dialogBoxFinished, 0);
+    return SDL_GetAtomicInt(&dialogBoxChoice);
 }
 
 void OHOS_OpenLink(const char* url)
@@ -931,8 +934,10 @@ static napi_value sdlSendDialogStatus(napi_env env, napi_callback_info info)
     napi_value args[1] = { NULL };
     napi_get_cb_info(env, info, &argc, args, NULL, NULL);
     
-    napi_get_value_int32(env, args[0], &dialogBoxChoice);
-    dialogBoxFinished = true;
+    int choice = -1;
+    napi_get_value_int32(env, args[0], &choice);
+    SDL_SetAtomicInt(&dialogBoxChoice, choice);
+    SDL_SetAtomicInt(&dialogBoxFinished, 1);
     
     napi_value result;
     napi_create_int32(env, 0, &result);
