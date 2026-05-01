@@ -543,7 +543,7 @@ static napi_value sdlCallbackInit(napi_env env, napi_callback_info info)
     
     napiCallbackData *data = SDL_malloc(sizeof(napiCallbackData));
     SDL_memset(data, 0, sizeof(napiCallbackData));
-    data->func = "test";
+    data->func = "onBridgeReady";
     data->argCount = 0;
     data->type = Int;
     
