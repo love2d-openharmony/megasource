@@ -20,6 +20,7 @@
 #include "SDL3/SDL_atomic.h"
 #include "SDL3/SDL_main.h"
 #include "SDL3/SDL_mutex.h"
+#include "SDL3/SDL_system.h"
 #include "SDL3/SDL_timer.h"
 #include "SDL_ohos.h"
 #include "napi/native_api.h"
@@ -179,7 +180,6 @@ static void sdlJSCallback(napi_env env, napi_value jsCb, void *content, void *da
     napi_get_named_property(env, callb, ar->func, &jsMethod);
 
     napi_value args[16];
-    SDL_Log("[SDL] calling js function %s with %d args", ar->func, ar->argCount);
     for (int i = 0; i < ar->argCount; i++) {
         if (!ar->arg[i].enabled) {
             continue;
@@ -977,6 +977,31 @@ static napi_value sdlSendDialogStatus(napi_env env, napi_callback_info info)
     return result;
 }
 
+static napi_value sdlOnBackground(napi_env env, napi_callback_info info)
+{
+    SDL_SetKeyboardFocus(NULL);
+    SDL_SendAppEvent(SDL_EVENT_WILL_ENTER_BACKGROUND);
+    SDL_SendAppEvent(SDL_EVENT_DID_ENTER_BACKGROUND);
+
+    napi_value result;
+    napi_create_int32(env, 0, &result);
+    return result;
+}
+
+static napi_value sdlOnForeground(napi_env env, napi_callback_info info)
+{
+    SDL_VideoDevice *_this = SDL_GetVideoDevice();
+    SDL_SendAppEvent(SDL_EVENT_WILL_ENTER_FOREGROUND);
+    SDL_SendAppEvent(SDL_EVENT_DID_ENTER_FOREGROUND);
+    if (_this && _this->windows) {
+        SDL_SetKeyboardFocus(_this->windows);
+    }
+
+    napi_value result;
+    napi_create_int32(env, 0, &result);
+    return result;
+}
+
 static napi_value SDL_OHOS_NAPI_Init(napi_env env, napi_value exports)
 {
     napi_property_descriptor desc[] = {
@@ -988,7 +1013,9 @@ static napi_value SDL_OHOS_NAPI_Init(napi_env env, napi_value exports)
         { "sdlDialogClearSelection", NULL, sdlDialogClearSelection, NULL, NULL, NULL, napi_default, NULL },
         { "sdlDialogExecCallback", NULL, sdlDialogExecCallback, NULL, NULL, NULL, napi_default, NULL },
         { "sdlDialogFileSelected", NULL, sdlDialogFileSelected, NULL, NULL, NULL, napi_default, NULL },
-        { "sdlSendDialogStatus", NULL, sdlSendDialogStatus, NULL, NULL, NULL, napi_default, NULL }
+        { "sdlSendDialogStatus", NULL, sdlSendDialogStatus, NULL, NULL, NULL, napi_default, NULL },
+        { "sdlOnBackground", NULL, sdlOnBackground, NULL, NULL, NULL, napi_default, NULL },
+        { "sdlOnForeground", NULL, sdlOnForeground, NULL, NULL, NULL, napi_default, NULL }
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
 
