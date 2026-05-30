@@ -419,6 +419,26 @@ bool OHOS_HasBackgroundMusic()
     SDL_free(data);
     return d;
 }
+bool OHOS_SetKeepScreenOn(bool enabled)
+{
+    napiCallbackData *data = SDL_malloc(sizeof(napiCallbackData));
+    SDL_memset(data, 0, sizeof(napiCallbackData));
+    data->func = "keepScreenOn";
+    data->argCount = 1;
+    data->arg[0].type = Int;
+    data->arg[0].enabled = true;
+    data->arg[0].data.i = enabled ? 1 : 0;
+    data->type = Int;
+    data->returned = false;
+
+    napi_call_threadsafe_function(napiEnv.func, data, napi_tsfn_blocking);
+
+    while (!data->returned) {}
+
+    const bool ok = data->ret.data.i == 1;
+    SDL_free(data);
+    return ok;
+}
 void OHOS_StartTextInput()
 {
     napiCallbackData *data = SDL_malloc(sizeof(napiCallbackData));
@@ -481,14 +501,19 @@ int OHOS_MessageBox(const char* title, const char* message, int ml, int* mapping
 void OHOS_OpenLink(const char* url)
 {
     napiCallbackData *data = SDL_malloc(sizeof(napiCallbackData));
+    char *urlCopy = SDL_strdup(url);
     SDL_memset(data, 0, sizeof(napiCallbackData));
     data->func = "openLink";
     data->argCount = 1;
     data->arg[0].type = String;
     data->arg[0].enabled = true;
-    data->arg[0].data.str = url;
+    data->arg[0].data.str = urlCopy;
+    data->returned = false;
 
     napi_call_threadsafe_function(napiEnv.func, data, napi_tsfn_blocking);
+    while (!data->returned) {}
+    SDL_free(urlCopy);
+    SDL_free(data);
 }
 
 const char* OHOS_Locale()

@@ -29,6 +29,7 @@ void OHOS_FileDialog(int id, const char* defpath, int allowmany, const char* fil
 bool OHOS_IsScreenKeyboardShown(); 
 void OHOS_StartTextInput();
 void OHOS_StopTextInput();
+bool OHOS_SetKeepScreenOn(bool enabled);
 
 typedef struct SDL_VideoData {
     SDL_Rect textRect;

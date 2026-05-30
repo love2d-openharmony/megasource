@@ -54,6 +54,10 @@ bool OHOS_StopTextInputImpl(SDL_VideoDevice *, SDL_Window *)
     OHOS_StopTextInput();
     return true;
 }
+static bool OHOS_SuspendScreenSaver(SDL_VideoDevice *_this)
+{
+    return OHOS_SetKeepScreenOn(_this->suspend_screensaver);
+}
 void OHOS_PumpEvents(SDL_VideoDevice *)
 {
     
@@ -106,6 +110,7 @@ static SDL_VideoDevice *OHOS_CreateDevice(void)
     device->HasScreenKeyboardSupport = OHOS_HasScreenKeyboardSupport;
     device->StartTextInput = OHOS_StartTextInputImpl;
     device->StopTextInput = OHOS_StopTextInputImpl;
+    device->SuspendScreenSaver = OHOS_SuspendScreenSaver;
     
     device->PumpEvents = OHOS_PumpEvents;
 
